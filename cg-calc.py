@@ -49,7 +49,7 @@ class CGPACalculator:
         self.total_courses.trace_add('write', self.validate_total)  # Updated
         self.result_var = tk.StringVar()
         self.error_var = tk.StringVar()
-        self.input_types = ['Score (0-100)', 'Letter Grade']  # Add input types
+        self.input_types = ['Letter Grade', 'Score (0-100)']  # Add input types
         
         self.setup_ui()
         
