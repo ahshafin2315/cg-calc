@@ -1,4 +1,4 @@
-# CGPA Calculator
+# Shortcut CGPA Calculator
 
 A simple and user-friendly GUI application for calculating Cumulative Grade Point Average (CGPA) using Python and Tkinter.
 
