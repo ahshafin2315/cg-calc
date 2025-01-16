@@ -1,4 +1,4 @@
-# CGPA Calculator
+# Shortcut CGPA Calculator
 
 A simple and user-friendly GUI application for calculating Cumulative Grade Point Average (CGPA) using Python and Tkinter.
 
@@ -12,7 +12,7 @@ A simple and user-friendly GUI application for calculating Cumulative Grade Poin
 
 ## Installation & Usage
 
-1. Download the latest release (`cg-calc.exe`) from the releases page
+1. Download the latest release (`cg-calc.exe`) from the [releases page](https://github.com/ahshafin2315/cg-calc/releases/tag/v0.1.1)
 2. Double-click the executable to run the application
 3. No installation required - the application runs standalone
 
