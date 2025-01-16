@@ -33,16 +33,40 @@ GRADE_RANGES = [
     (0, 50, 'F')
 ]
 
+# Style configurations
+COLORS = {
+    'primary': '#2c3e50',    # Dark blue-gray
+    'secondary': '#3498db',  # Blue
+    'background': '#ecf0f1', # Light gray
+    'text': '#2c3e50',      # Dark blue-gray
+    'error': '#e74c3c',     # Red
+    'success': '#27ae60'    # Green
+}
+
+FONTS = {
+    'header': ('Helvetica', 12, 'bold'),
+    'normal': ('Helvetica', 10),
+    'small': ('Helvetica', 9),
+    'result': ('Helvetica', 14, 'bold')
+}
+
 class CGPACalculator:
     def __init__(self):
         self.app = tk.Tk()
         self.app.title("CGPA Calculator")
-        self.app.geometry("400x600")
+        self.app.geometry("500x700")
         # Add icon to window
         try:
             self.app.iconbitmap('app_icon.ico')
         except tk.TclError:
             pass  # Icon file not found, use default
+        
+        self.app.configure(bg=COLORS['background'])
+        
+        # Create style for ttk widgets
+        self.style = ttk.Style()
+        self.style.configure('Custom.TCombobox', padding=5)
+        self.style.configure('Custom.TButton', padding=5)
         
         self.grade_rows = []
         self.total_courses = tk.StringVar()
@@ -54,31 +78,85 @@ class CGPACalculator:
         self.setup_ui()
         
     def setup_ui(self):
-        # Total courses input
-        tk.Label(self.app, text="Total number of courses:").grid(row=0, column=0, pady=5, padx=5)
-        tk.Entry(self.app, textvariable=self.total_courses, width=10).grid(row=0, column=1, pady=5)
+        # Main container with padding
+        main_frame = tk.Frame(self.app, bg=COLORS['background'], padx=20, pady=10)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Header
+        header = tk.Label(main_frame, text="CGPA Calculator", 
+                         font=('Helvetica', 16, 'bold'),
+                         bg=COLORS['background'],
+                         fg=COLORS['primary'],
+                         pady=10)
+        header.pack()
+
+        # Total courses input frame
+        input_frame = tk.Frame(main_frame, bg=COLORS['background'])
+        input_frame.pack(fill=tk.X, pady=10)
         
+        tk.Label(input_frame, text="Total number of courses:", 
+                font=FONTS['normal'],
+                bg=COLORS['background'],
+                fg=COLORS['text']).pack(side=tk.LEFT, padx=5)
+        
+        tk.Entry(input_frame, textvariable=self.total_courses,
+                width=10,
+                font=FONTS['normal'],
+                relief='solid').pack(side=tk.LEFT, padx=5)
+
         # Grading scale information
-        info_frame = tk.Frame(self.app)
-        info_frame.grid(row=1, column=0, columnspan=2, pady=5)
-        tk.Label(info_frame, text="Grading Scale:", font=('Arial', 10, 'bold')).pack()
-        tk.Label(info_frame, text="97-100: A+ (4.0)  |  90-<97: A (4.0)  |  85-<90: A- (3.7)").pack()
-        tk.Label(info_frame, text="80-<85: B+ (3.3)  |  75-<80: B (3.0)  |  70-<75: B- (2.7)").pack()
-        tk.Label(info_frame, text="65-<70: C+ (2.3)  |  60-<65: C (2.0)  |  57-<60: C- (1.7)").pack()
-        tk.Label(info_frame, text="55-<57: D+ (1.3)  |  52-<55: D (1.0)  |  50-<52: D- (0.7)").pack()
-        tk.Label(info_frame, text="<50: F (0.0)").pack()
+        info_frame = tk.Frame(main_frame, bg=COLORS['background'],
+                            relief='groove', borderwidth=1)
+        info_frame.pack(fill=tk.X, pady=10)
         
-        # Add grade pair button
-        tk.Button(self.app, text="Add Grade", command=self.add_grade_row).grid(row=2, column=0, columnspan=2, pady=5)
+        tk.Label(info_frame, text="Grading Scale",
+                font=FONTS['header'],
+                bg=COLORS['background'],
+                fg=COLORS['primary']).pack(pady=5)
+
+        scale_frame = tk.Frame(info_frame, bg=COLORS['background'])
+        scale_frame.pack(pady=5)
         
+        # Grading scale labels with better formatting
+        grades_info = [
+            "97-100: A+ (4.0)  |  90-<97: A (4.0)  |  85-<90: A- (3.7)",
+            "80-<85: B+ (3.3)  |  75-<80: B (3.0)  |  70-<75: B- (2.7)",
+            "65-<70: C+ (2.3)  |  60-<65: C (2.0)  |  57-<60: C- (1.7)",
+            "55-<57: D+ (1.3)  |  52-<55: D (1.0)  |  50-<52: D- (0.7)",
+            "<50: F (0.0)"
+        ]
+        
+        for info in grades_info:
+            tk.Label(scale_frame, text=info,
+                    font=FONTS['small'],
+                    bg=COLORS['background'],
+                    fg=COLORS['text']).pack()
+
+        # Add grade button
+        tk.Button(main_frame, text="Add Course",
+                 font=FONTS['normal'],
+                 bg=COLORS['secondary'],
+                 fg='white',
+                 relief='flat',
+                 command=self.add_grade_row,
+                 padx=20, pady=5).pack(pady=10)
+
         # Container for grade rows
-        self.container = tk.Frame(self.app)
-        self.container.grid(row=3, column=0, columnspan=2, pady=5)
-        
+        self.container = tk.Frame(main_frame, bg=COLORS['background'])
+        self.container.pack(fill=tk.BOTH, expand=True)
+
         # Result and error labels
-        tk.Label(self.app, textvariable=self.result_var, font=('Arial', 12, 'bold')).grid(row=4, column=0, columnspan=2, pady=5)
-        tk.Label(self.app, textvariable=self.error_var, fg='red').grid(row=5, column=0, columnspan=2, pady=5)
+        self.result_var.set("Current CGPA: --")
+        tk.Label(main_frame, textvariable=self.result_var,
+                font=FONTS['result'],
+                bg=COLORS['background'],
+                fg=COLORS['primary']).pack(pady=10)
         
+        tk.Label(main_frame, textvariable=self.error_var,
+                font=FONTS['normal'],
+                bg=COLORS['background'],
+                fg=COLORS['error']).pack(pady=5)
+
     def get_letter_grade(self, value, input_type):
         if input_type == 'Score (0-100)':
             try:
@@ -94,8 +172,8 @@ class CGPACalculator:
 
     def add_grade_row(self):
         row = len(self.grade_rows)
-        frame = tk.Frame(self.container)
-        frame.grid(row=row, column=0, pady=2)
+        frame = tk.Frame(self.container, bg=COLORS['background'])
+        frame.pack(fill=tk.X, pady=5)
         
         grade_var = tk.StringVar()
         count_var = tk.StringVar()
@@ -104,12 +182,12 @@ class CGPACalculator:
         
         # Input type selector
         input_type = ttk.Combobox(frame, values=self.input_types, 
-                                 textvariable=input_type_var, width=12, state='readonly')
-        input_type.grid(row=0, column=0, padx=5)
+                                 textvariable=input_type_var, width=12, state='readonly', style='Custom.TCombobox')
+        input_type.pack(side=tk.LEFT, padx=5)
         
         # Grade input (will be updated based on input type)
-        grade_frame = tk.Frame(frame)
-        grade_frame.grid(row=0, column=1, padx=5)
+        grade_frame = tk.Frame(frame, bg=COLORS['background'])
+        grade_frame.pack(side=tk.LEFT, padx=5)
         
         def update_grade_input(*args):
             # Clear grade frame
@@ -117,10 +195,10 @@ class CGPACalculator:
                 widget.destroy()
             
             if input_type_var.get() == 'Score (0-100)':
-                tk.Entry(grade_frame, width=5, textvariable=grade_var).pack(side='left')
+                tk.Entry(grade_frame, width=5, textvariable=grade_var, font=FONTS['normal'], relief='solid').pack(side='left')
             else:
                 grade_selector = ttk.Combobox(grade_frame, values=list(GRADES.keys()), 
-                                            textvariable=grade_var, width=5, state='readonly')
+                                            textvariable=grade_var, width=5, state='readonly', style='Custom.TCombobox')
                 grade_selector.pack(side='left')
             
             # Reset grade value
@@ -128,16 +206,16 @@ class CGPACalculator:
             letter_grade_var.set('')
         
         # Letter grade display (only shown for numerical input)
-        letter_label = tk.Label(frame, textvariable=letter_grade_var, width=4)
-        letter_label.grid(row=0, column=2, padx=5)
+        letter_label = tk.Label(frame, textvariable=letter_grade_var, width=4, font=FONTS['normal'], bg=COLORS['background'])
+        letter_label.pack(side=tk.LEFT, padx=5)
         
-        tk.Label(frame, text="Count:").grid(row=0, column=3, padx=5)
-        count_entry = tk.Entry(frame, width=5, textvariable=count_var)
-        count_entry.grid(row=0, column=4, padx=5)
+        tk.Label(frame, text="Count:", font=FONTS['normal'], bg=COLORS['background']).pack(side=tk.LEFT, padx=5)
+        count_entry = tk.Entry(frame, width=5, textvariable=count_var, font=FONTS['normal'], relief='solid')
+        count_entry.pack(side=tk.LEFT, padx=5)
         
         # Delete button
-        tk.Button(frame, text="X", 
-                 command=lambda: self.delete_row(frame, (grade_var, count_var, letter_grade_var))).grid(row=0, column=5)
+        tk.Button(frame, text="×", font=('Helvetica', 12), bg=COLORS['error'], fg='white', relief='flat', 
+                 command=lambda: self.delete_row(frame, (grade_var, count_var, letter_grade_var))).pack(side=tk.LEFT, padx=5)
         
         def update_grade(*args):
             input_val = grade_var.get()
