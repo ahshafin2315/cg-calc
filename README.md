@@ -69,6 +69,7 @@ To create a standalone executable:
    ```
    - `--windowed`: Prevents console window from appearing
    - `--icon`: Specifies the application icon file
+   
    The executable and its dependencies will be in the `dist/cg-calc` directory.
 3. Creating distribution zip:
    - Navigate to `dist/cg-calc/` folder
