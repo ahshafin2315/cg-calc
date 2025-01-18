@@ -1,14 +1,19 @@
 # Shortcut CGPA Calculator
 
-A simple and user-friendly GUI application for calculating Cumulative Grade Point Average (CGPA) using Python and Tkinter.
+A comprehensive GUI application for calculating Cumulative Grade Point Average (CGPA) using Python and Tkinter, with enhanced features and a modern interface.
 
 ## Features
 
 - Input grades either as numerical scores (0-100) or letter grades
 - Dynamic addition and removal of course grades
 - Real-time CGPA calculation
+- Built-in quick calculator for grade calculations
 - Comprehensive grading scale display
+- Degree-specific credit requirements display for various departments
+- Separate thesis/internship (4 credits) grade input
 - Input validation and error handling
+- Scrollable course management interface
+- Modern UI with color themes and tooltips
 
 ## Installation & Usage
 
@@ -18,14 +23,18 @@ A simple and user-friendly GUI application for calculating Cumulative Grade Poin
 
 ## Using the Calculator
 
-1. Enter the total number of courses
-2. Click "Add Grade" to add a new course entry
-3. For each course:
+1. Select your undergraduate program from the dropdown menu to see credit details
+2. Enter the total credits completed (excluding thesis/internship)
+3. Click "Add Course" to add course entries
+4. For each course:
    - Select input type (Score or Letter Grade)
    - Enter the grade
    - Enter the course count (credit hours/units)
-4. The CGPA will be calculated automatically
-5. Use the 'X' button to remove any course entry
+5. Enable thesis/internship checkbox if applicable and enter grade
+6. The CGPA will be calculated automatically
+7. Use the built-in calculator for quick calculations if needed
+8. Use the 'X' button to remove any course entry
+9. Click "Clear All" to reset all entries
 
 ## For Developers
 
