@@ -17,9 +17,10 @@ A comprehensive GUI application for calculating Cumulative Grade Point Average (
 
 ## Installation & Usage
 
-1. Download the latest release (`cg-calc.exe`) from the [releases page](https://github.com/ahshafin2315/cg-calc/releases)
-2. Double-click the executable to run the application
-3. No installation required - the application runs standalone
+1. Download the latest release (`cg-calc.zip`) from the [releases page](https://github.com/ahshafin2315/cg-calc/releases)
+2. Extract the zip file to your preferred location
+3. Run `cg-calc.exe` from the extracted folder
+4. No installation required - just keep the extracted folder intact
 
 ## Using the Calculator
 
@@ -62,15 +63,18 @@ To create a standalone executable:
    ```bash
    cd cg-calc
    ```
-2. Run PyInstaller:
+2. Running PyInstaller:
    ```bash
-   pyinstaller --onefile --windowed --icon=app_icon.ico cg-calc.py
+   pyinstaller --windowed --icon=app_icon.ico cg-calc.py
    ```
-   - `--onefile`: Creates a single executable file
    - `--windowed`: Prevents console window from appearing
    - `--icon`: Specifies the application icon file
-
-The executable will be created in the `dist` directory.
+   The executable and its dependencies will be in the `dist/cg-calc` directory.
+3. Creating distribution zip:
+   - Navigate to `dist/cg-calc/` folder
+   - Inside the folder you have all components and executable
+   - Zip the compoments
+   - The zip file is ready for distribution
 
 ## Contributing
 
