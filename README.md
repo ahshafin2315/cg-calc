@@ -1,46 +1,45 @@
-# Shortcut CGPA Calculator
+# CGPA Calculator
 
-A comprehensive GUI application for calculating Cumulative Grade Point Average (CGPA) using Python and Tkinter, with enhanced features and a modern interface.
+A GUI application for calculating CGPA (Cumulative Grade Point Average) with current and future semester predictions. Built specifically for BRAC University's grading system.
 
 ## Features
 
-- Input grades either as numerical scores (0-100) or letter grades
-- Dynamic addition and removal of course grades
-- Real-time CGPA calculation
-- Built-in quick calculator for grade calculations
-- Comprehensive grading scale display
-- Degree-specific credit requirements display for various departments
-- Separate thesis/internship (4 credits) grade input
-- Input validation and error handling
-- Scrollable course management interface
-- Modern UI with color themes and tooltips
+- Calculate current CGPA with up to 5 decimal accuracy
+- Predict future CGPA with semester plan system
+- Attached standard grading scale display
+- Dropdown to show Department-specific credit requirements
+- Seperation Thesis/Internship grade inclusion option (4 credits)
+- Manual CGPA input option for faster calculation
+- Supports up to 5 courses per semester in prediction
 
-## Installation & Usage
+## Quick Start Guide
 
-1. Download the latest release (`cg-calc.zip`) from the [releases page](https://github.com/ahshafin2315/cg-calc/releases)
-2. Extract the zip file to your preferred location
-3. Run `cg-calc.exe` from the extracted folder
-4. No installation required - just keep the extracted folder intact
+### Current CGPA Calculation
+1. Select your department from the dropdown
+2. Enter number of courses for each grade you received
+3. Enable thesis checkbox if completed and select grade
+4. Click "Calculate Current CGPA"
 
-## Using the Calculator
+### Future CGPA Prediction
+1. Have your current CGPA calculated OR
+2. Enable "Manual CGPA & Credit Input" and enter your details
+3. Click "Add New Semester"
+4. Add courses to each semester (max 5 per semester):
+   - Select letter grade
+   - Default credit is 3 (can be changed)
+5. Add more semesters as needed
+6. Click "Calculate Future CGPA"
 
-1. Select your undergraduate program from the dropdown menu to see credit details
-2. Enter the total credits completed (excluding thesis/internship)
-3. Click "Add Course" to add course entries
-4. For each course:
-   - Select input type (Score or Letter Grade)
-   - Enter the grade
-   - Enter the course count (credit hours/units)
-5. Enable thesis/internship checkbox if applicable and enter grade
-6. The CGPA will be calculated automatically
-7. Use the built-in calculator for quick calculations if needed
-8. Use the 'X' button to remove any course entry
-9. Click "Clear All" to reset all entries
+### Tips
+- Use the Clear All button (bottom right) to reset everything
+- Remove individual courses using the X button
+- Remove entire semesters using the X button
+- Watch credit counts update automatically
+- Check error messages for validation issues
 
 ## For Developers
 
-If you want to run the Python source code directly:
-
+### Setup
 1. Ensure you have Python 3.x installed
 2. Clone the repository:
    ```bash
@@ -57,7 +56,7 @@ If you want to run the Python source code directly:
 
 ### Building the Executable
 
-To create a standalone executable:
+To create executable:
 
 1. Navigate to the project directory:
    ```bash

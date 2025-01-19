@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
+# Grading scale for BRACU Undergrad Standard
 GRADES = {
     "A+": 4.0,
     "A": 4.0,
@@ -18,22 +19,6 @@ GRADES = {
     "F": 0.0,
 }
 
-GRADE_RANGES = [
-    (97, 100, "A+"),
-    (90, 97, "A"),
-    (85, 90, "A-"),
-    (80, 85, "B+"),
-    (75, 80, "B"),
-    (70, 75, "B-"),
-    (65, 70, "C+"),
-    (60, 65, "C"),
-    (57, 60, "C-"),
-    (55, 57, "D+"),
-    (52, 55, "D"),
-    (50, 52, "D-"),
-    (0, 50, "F"),
-]
-
 # Style configurations
 COLORS = {
     "primary": "#2c3e50",  # Dark blue-gray
@@ -45,14 +30,16 @@ COLORS = {
 }
 
 FONTS = {
+    "AppName": ("Helvetica", 16, "bold"),
     "header": ("Helvetica", 14, "bold"),
-    "normal": ("Helvetica", 11),
-    "normal-bold": ("Helvetica", 11, "bold"),
-    "small": ("Helvetica", 10),
+    "subheader": ("Helvetica", 12, "bold"),
+    "normal": ("Helvetica", 10),
+    "normal-bold": ("Helvetica", 10, "bold"),
+    "small": ("Helvetica", 9),
     "result": ("Helvetica", 14, "bold"),
 }
 
-# Undergrap Program Credit informations
+# BRACU Undergrad Program Credit informations
 PROGRAMS = {
     "Applied Physics and Electronics (APE)": {
         "credits": 130,
@@ -89,8 +76,8 @@ class CGPACalculator:
     def __init__(self):
         self.app = tk.Tk()
         self.app.title("CGPA Calculator")
-        self.app.geometry("1000x800")
-        self.app.resizable(True, True)  # Make window non-resizable
+        self.app.geometry("960x780") # Set window size
+        self.app.resizable(False, False) # Make window non-resizable
         # Add icon to window
         try:
             self.app.iconbitmap("app_icon.ico")
@@ -106,98 +93,197 @@ class CGPACalculator:
 
         # Program selection variables
         self.selected_program = tk.StringVar()
-        self.program_info_var = tk.StringVar()
-
-        # Credit and course tracking variables
-        self.total_credits = tk.StringVar()
-        self.course_count_var = tk.StringVar()
 
         # Grade input options
-        self.input_types = ["Letter Grade", "Score (0-100)"]
         self.grade_rows = []
 
         # Thesis related variables
-        self.include_thesis = tk.BooleanVar()
-        self.thesis_grade_var = tk.StringVar()
-        self.thesis_letter_grade_var = tk.StringVar()
-        self.thesis_input_type_var = tk.StringVar(value=self.input_types[0])
+        self.thesis_grade = tk.StringVar()
 
         # Display variables
-        self.result_var = tk.StringVar(value="Current CGPA: ---")
-        self.error_var = tk.StringVar()
+        self.calculate_future_btn = None  # To store the calculate future button
+        
+        self.manual_cgpa = tk.StringVar()
+        self.thesis_frame = None
+        
+        # Consolidate tracking variables
+        self.tracking = {
+            "current_cgpa": None,
+            "semester_count": 0,
+            "semesters": [],
+            "semester_list": {}
+        }
+        
+        # Consolidate state variables
+        self.state = {
+            "manual_input_enabled": tk.BooleanVar(value=False),
+            "include_thesis": tk.BooleanVar(),
+            "error_var": tk.StringVar(),
+            "program_info_var": tk.StringVar()
+        }
+        
+        # Consolidate result variables
+        self.results = {
+            "current_result": tk.StringVar(value="Calculated CGPA: ---"),
+            "future_result": tk.StringVar(value="Future CGPA: ---"),
+            "total_credits": tk.StringVar(),
+            "total_course_count": tk.StringVar()
+        }
 
         # Set up variable traces
         self.selected_program.trace_add("write", self.update_program_info)
-        self.total_credits.trace_add("write", self.update_course_count)
-        self.include_thesis.trace_add("write", self.update_course_count)
-
-        # Add new traces for thesis updates
-        self.thesis_input_type_var.trace_add("write", self.update_thesis_input)
-        self.thesis_grade_var.trace_add("write", self.update_thesis_grade)
+        self.results["total_credits"].trace_add("write", self.update_course_count)
+        self.state["include_thesis"].trace_add("write", self.update_course_count)
+        self.thesis_grade.trace_add("write", self.calculate_cgpa)
 
         # Add tooltip text
         self.thesis_tooltip = "Enable thesis/internship checkbox to input grade"
 
         # Add calculator variables
-        self.calc_display = tk.StringVar(value="0")
-        self.calc_expression = tk.StringVar(value="")  # New: shows full expression
-        self.current_num = "0"
-        self.prev_num = None
-        self.operation = None
-        self.new_number = True  # Flag to handle new number input
+        self.grade_counts = {grade: tk.StringVar(value="0") for grade in GRADES.keys()}
+        
+        self.SETUP_UI()
 
-        self.setup_ui()
-
-    def setup_ui(self):
+    # FULL UI SETUP
+    def SETUP_UI(self):
         # Main container with padding
         main_frame = tk.Frame(self.app, bg=COLORS["background"], padx=20, pady=10)
         main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Content frame to hold left and right frames
-        content_frame = tk.Frame(main_frame, bg=COLORS["background"])
-        content_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
+        # Split into left and right frames with clear separation
 
-        # Create left and right frames for split layout
-        left_frame = tk.Frame(content_frame, bg=COLORS["background"])
-        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+        left_frame = tk.Frame(main_frame, bg=COLORS["background"], width=450)
+        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        left_frame.pack_propagate(False)  # Maintain width
 
-        right_frame = tk.Frame(content_frame, bg=COLORS["background"])
-        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10, 0))
+        separator = ttk.Separator(main_frame, orient="vertical")
+        separator.pack(side=tk.LEFT, fill=tk.Y, padx=10)
+        
+        right_frame = tk.Frame(main_frame, bg=COLORS["background"], width=450)
+        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        right_frame.pack_propagate(False)  # Maintain width
 
-        # Bottom frame for CGPA display
-        bottom_frame = tk.Frame(
-            main_frame,
-            bg=COLORS["background"],
-            height=10,
-            relief="groove",
-            borderwidth=1,
-        )
-        bottom_frame.pack(side=tk.BOTTOM, fill=tk.BOTH, pady=5)
+        self.SETUP_left_frame(left_frame)
+        self.SETUP_right_frame(right_frame)
+    def SETUP_left_frame(self, parent):
 
-        # Header with app name (in left frame)
-        header_frame = tk.Frame(left_frame, bg=COLORS["background"])
-        header_frame.pack(fill=tk.X, pady=10)
+        # Header & Instructions frame
+        self.SETUP_instruction_frame(parent)
 
+        # Degree selection frame
+        self.SETUP_degree_frame(parent)
+
+        # Include Thesis frame
+        self.SETUP_thesis_section(parent)
+
+        # BRACU Grading scale information frame
+        self.SETUP_gradeInfo_frame(parent)
+
+        # Grade count input section Frame
+        self.SETUP_gradeInput_grid(parent)
+
+        # Calculate button and Result display
+        self.SETUP_result_frame(parent)
+    def SETUP_right_frame(self, parent):
+        # Header
         tk.Label(
-            header_frame,
-            text="CGPA Calculator",
-            font=FONTS["header"],
+            parent,
+            text="Future CGPA Prediction",
+            font=FONTS["AppName"],
+            bg=COLORS["background"],
+            fg=COLORS["secondary"],
+        ).pack(pady=10)
+
+        # Manual input frame
+        self.SETUP_ManualInput_frame(parent)
+
+        # Add semester button
+        tk.Button(
+            parent,
+            text="Add New Semester",
+            command=self.add_semester_box,
+            bg=COLORS["secondary"],
+            fg="white",
+            font=FONTS["normal-bold"],
+        ).pack(pady=5)
+
+        # Semester container
+        self.SETUP_scrollable_semester_frame(parent)
+
+        # Calculate button
+        self.calculate_future_btn = tk.Button(
+            parent,
+            text="Calculate Future CGPA",
+            command=self.calculate_all_semesters,
+            font=FONTS["normal-bold"],
+            bg=COLORS["secondary"],
+            fg="white",
+        )
+        self.calculate_future_btn.pack(pady=5)
+
+        # Future CGPA display
+        tk.Label(
+            parent,
+            textvariable=self.results["future_result"],
+            font=FONTS["result"],
+            bg=COLORS["background"],
+            fg=COLORS["secondary"],
+        ).pack(pady=8)
+
+        # Clear All button at bottom right
+        tk.Button(
+            parent,
+            text="Clear All",
+            command=self.clear_all,
+            font=FONTS["normal-bold"],
+            bg=COLORS["error"],
+            fg="white",
+        ).pack(side=tk.BOTTOM, anchor=tk.SE, padx=10, pady=5)
+    
+    # LEFT FRAMES
+    def SETUP_instruction_frame(self, parent):
+        # Add header for current CGPA section
+        tk.Label(
+            parent,
+            text="Current CGPA Calculator",
+            font=FONTS["AppName"],
             bg=COLORS["background"],
             fg=COLORS["primary"],
-        ).pack()
+        ).pack(pady=5)
 
-        degree_frame = tk.Frame(left_frame, bg=COLORS["background"])
+        # Add instructions
+        instruction_frame = tk.Frame(parent, bg=COLORS["background"], relief="groove", borderwidth=1)
+        instruction_frame.pack(fill=tk.X, pady=10, padx=5)
+        
+        tk.Label(
+            instruction_frame,
+            text="Calculate Your Current CGPA Upto 5 Decimal Accuracy",
+            font=FONTS["subheader"],
+            bg=COLORS["background"],
+            fg=COLORS["primary"],
+        ).pack(pady=(5,0))
+        
+        tk.Label(
+            instruction_frame,
+            text="1. Select a degree from dropdown to see credit details\n2. Input below the number of courses you got each respected grade\n3. Include thesis/internship grade if completed",
+            font=FONTS["normal"],
+            bg=COLORS["background"],
+            fg=COLORS["text"],
+            justify="left",
+        ).pack(pady=5)
+    def SETUP_degree_frame(self, parent):
+        degree_frame = tk.Frame(parent, bg=COLORS["background"])
         degree_frame.pack(fill=tk.X, pady=5)
 
         tk.Label(
             degree_frame,
-            text="Undergrad Program Details:",
+            text="Undergrad Degree Details:",
             font=FONTS["normal-bold"],
             bg=COLORS["background"],
             fg=COLORS["primary"],
         ).pack(side=tk.LEFT, padx=5)
 
-        # Degree selection
+        # Degree selector dropdown
         degree_selector = ttk.Combobox(
             degree_frame,
             values=list(PROGRAMS.keys()),
@@ -209,72 +295,54 @@ class CGPACalculator:
 
         # Degree info display
         tk.Label(
-            left_frame,
-            textvariable=self.program_info_var,
+            parent,
+            textvariable=self.state["program_info_var"],
             font=FONTS["normal"],
             bg=COLORS["background"],
             fg=COLORS["secondary"],
         ).pack(pady=5)
+    def SETUP_thesis_section(self, parent):
+        self.thesis_frame = tk.Frame(parent, bg=COLORS["background"])
+        self.thesis_frame.pack(fill=tk.BOTH, pady=5)
 
-        # Credits completed frame
-        credits_frame = tk.Frame(left_frame, bg=COLORS["background"])
-        credits_frame.pack(fill=tk.X, pady=10)
-
+        # Thesis label and grade selector
         tk.Label(
-            credits_frame,
-            text="Total credits completed (w/o thesis):",
+            self.thesis_frame,
+            text="Thesis Grade:",
             font=FONTS["normal"],
             bg=COLORS["background"],
         ).pack(side=tk.LEFT, padx=5)
 
-        tk.Entry(
-            credits_frame,
-            textvariable=self.total_credits,
-            width=10,
-            font=FONTS["normal"],
-        ).pack(side=tk.LEFT, padx=5)
-
-        # Course count display
-        tk.Label(
-            left_frame,
-            textvariable=self.course_count_var,
-            font=FONTS["small"],
-            bg=COLORS["background"],
-            fg=COLORS["text"],
-        ).pack(pady=5)
-
-        # Thesis checkbox
-        thesis_check = tk.Checkbutton(
-            left_frame,
-            text="Include Thesis/Internship (4 credits)",
-            variable=self.include_thesis,
-            bg=COLORS["background"],
-            font=FONTS["normal"],
-            command=self.toggle_thesis,
+        grade_selector = ttk.Combobox(
+            self.thesis_frame,
+            values=list(GRADES.keys()),
+            textvariable=self.thesis_grade,
+            width=5,
+            state="disabled",  # Initially disabled
+            style="Custom.TCombobox",
         )
-        thesis_check.pack(pady=5)
+        grade_selector.pack(side=tk.LEFT, padx=5)
 
-        # Grading scale information
+        tk.Checkbutton(
+            self.thesis_frame,
+            text="Include (4 Credits)",
+            variable=self.state["include_thesis"],
+            bg=COLORS["background"],
+            command=self.toggle_thesis,
+        ).pack(side=tk.LEFT, padx=5)
+    def SETUP_gradeInfo_frame(self, parent):
         info_frame = tk.Frame(
-            left_frame, bg=COLORS["background"], relief="groove", borderwidth=1
+            parent, bg=COLORS["background"], relief="groove", borderwidth=1
         )
         info_frame.pack(fill=tk.X, pady=10)
 
         tk.Label(
             info_frame,
-            text="Grading Scale",
-            font=FONTS["header"],
+            text="Grading Scale (BRACU Undergrad Standard)",
+            font=FONTS["subheader"],
             bg=COLORS["background"],
             fg=COLORS["primary"],
         ).pack(pady=5)
-
-        tk.Label(
-            info_frame,
-            text="(BRAC University Undergrad Standard)",
-            font=FONTS["normal-bold"],
-            bg=COLORS["background"],
-            fg=COLORS["primary"],
-        ).pack(pady=(5, 0))
 
         scale_frame = tk.Frame(info_frame, bg=COLORS["background"])
         scale_frame.pack(pady=5)
@@ -296,666 +364,575 @@ class CGPACalculator:
                 bg=COLORS["background"],
                 fg=COLORS["text"],
             ).pack()
-
-        # Add mini calculator
-        calc_frame = tk.Frame(
-            left_frame, bg=COLORS["background"], relief="groove", borderwidth=1
-        )
-        calc_frame.pack(fill=tk.X, pady=10)
-
-        # Calculator title and expression display
+    def SETUP_gradeInput_grid(self, parent):
+        self.grade_counts_frame = tk.Frame(parent, bg=COLORS["background"])
+        self.grade_counts_frame.pack(fill=tk.X, pady=5, padx=5)
+        
+        # Header for grade input section
         tk.Label(
-            calc_frame,
-            text="Quick Calculator",
-            font=FONTS["normal-bold"],
+            self.grade_counts_frame,
+            text="Course Count per Grade",
+            font=FONTS["subheader"],
             bg=COLORS["background"],
             fg=COLORS["primary"],
-        ).pack(pady=(5, 0))
+        ).pack(pady=(5,5))
 
-        # Create a frame to hold both display and expression
-        display_frame = tk.Frame(
-            calc_frame, bg=COLORS["background"], relief="groove", borderwidth=1
-        )
-        display_frame.pack(expand=True, fill=tk.X, padx=150, pady=5)
+        # Create grid frame
+        grid_frame = tk.Frame(self.grade_counts_frame, bg=COLORS["background"])
+        grid_frame.pack(pady=5)
 
-        # Calculator input/display
-        calc_entry = tk.Entry(
-            display_frame,
-            textvariable=self.calc_display,
-            font=FONTS["normal"],
-            justify="right",
-            width=15,
-            relief="solid",
-        )
-        calc_entry.pack(side=tk.LEFT, padx=(0, 5))
+        # Organize grades in a 4x4 grid
+        row = 0
+        col = 0
+        for letter in GRADES.keys():
+            frame = tk.Frame(grid_frame, bg=COLORS["background"])
+            frame.grid(row=row, column=col, padx=2, pady=2)
 
-        # Expression display
+            grade_text = f"{letter} ({GRADES[letter]:.1f})"
+            tk.Label(
+                frame,
+                text=grade_text,
+                font=FONTS["normal"],
+                width=8,
+                bg=COLORS["background"],
+            ).pack(side=tk.LEFT)
+
+            tk.Entry(
+                frame,
+                textvariable=self.grade_counts[letter],
+                width=4,
+                font=FONTS["normal"],
+                state="normal",
+            ).pack(side=tk.LEFT, padx=2)
+
+            col += 1
+            if col > 3:  # 4 columns
+                col = 0
+                row += 1
+
+        # Course count display
         tk.Label(
-            display_frame,
-            textvariable=self.calc_expression,
+            parent,
+            textvariable=self.results["total_course_count"],
             font=FONTS["small"],
             bg=COLORS["background"],
             fg=COLORS["text"],
-            anchor="w",
-            width=10,
-        ).pack(side=tk.LEFT, padx=(5, 0))
+        ).pack(pady=5)
 
-        # Bind keyboard events
-        calc_entry.bind("<Key>", self.handle_key)
-        calc_entry.bind("<Return>", lambda e: self.calculator_click("="))
-        calc_entry.bind("<Escape>", lambda e: self.calculator_click("C"))
-        calc_entry.bind("<BackSpace>", self.handle_backspace)
-
-        # Calculator buttons
-        button_configs = [
-            ("7", "8", "9", "/"),
-            ("4", "5", "6", "*"),
-            ("1", "2", "3", "-"),
-            ("0", ".", "=", "+"),
-            ("C", "CE"),
-        ]
-
-        for row in button_configs:
-            btn_frame = tk.Frame(calc_frame, bg=COLORS["background"])
-            btn_frame.pack(pady=2)
-
-            for text in row:
-                btn = tk.Button(
-                    btn_frame,
-                    text=text,
-                    width=5,
-                    font=FONTS["normal"],
-                    relief="flat",
-                    bg=(
-                        COLORS["error"]
-                        if text in "CE C"
-                        else COLORS["secondary"] if text in "=/+-*" else "white"
-                    ),
-                    fg="white" if text in "=/+-*CE C" else COLORS["text"],
-                    command=lambda x=text: self.calculator_click(x),
-                )
-                btn.pack(side=tk.LEFT, padx=2)
-
-        # Organize right frame contents
-        right_top_frame = tk.Frame(right_frame, bg=COLORS["background"])
-        right_top_frame.pack(side=tk.TOP, fill=tk.X, pady=5)
-
-        # Create title for course management section
-        tk.Label(
-            right_top_frame,
-            text="Course Management",
-            font=FONTS["header"],
-            bg=COLORS["background"],
-            fg=COLORS["primary"],
-        ).pack(pady=(0, 10))
-
-        # Add grade button at the top of right frame
-        button_frame = tk.Frame(right_top_frame, bg=COLORS["background"])
+        # Button container for calculate button
+        button_frame = tk.Frame(self.grade_counts_frame, bg=COLORS["background"])
         button_frame.pack(pady=10)
 
-        tk.Button(
+        # Calculate button
+        self.calculate_btn = tk.Button(
             button_frame,
-            text="Add Course",
-            font=FONTS["normal"],
+            text="Calculate Current CGPA",
+            command=self.calculate_cgpa,
+            font=FONTS["normal-bold"],
             bg=COLORS["secondary"],
             fg="white",
-            relief="flat",
-            command=self.add_grade_row,
-            padx=20,
-            pady=5,
-        ).pack(side=tk.LEFT, padx=5)
-
-        tk.Button(
-            button_frame,
-            text="Clear All",
-            font=FONTS["normal"],
-            bg=COLORS["error"],
-            fg="white",
-            relief="flat",
-            command=self.clear_all,
-            padx=20,
-            pady=5,
-        ).pack(side=tk.LEFT, padx=5)
-
-        # Create scrollable frame for course management with white background
-        course_frame = tk.Frame(right_frame, bg="white", relief="solid", borderwidth=2)
-        course_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, pady=(5, 0))
-
-        course_canvas = tk.Canvas(course_frame, bg="white")
-        scrollbar = ttk.Scrollbar(
-            course_frame, orient="vertical", command=course_canvas.yview
+            state="normal",
         )
-        self.container = tk.Frame(course_canvas, bg="white")
-
-        # Configure scrolling
-        self.container.bind(
-            "<Configure>",
-            lambda e: course_canvas.configure(scrollregion=course_canvas.bbox("all")),
-        )
-
-        course_canvas.create_window((0, 0), window=self.container, anchor="nw")
-        course_canvas.configure(yscrollcommand=scrollbar.set)
-
-        # Pack the scrollable components
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        course_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-        # Add thesis frame at the bottom of right frame
-        thesis_frame = tk.Frame(right_frame, bg=COLORS["background"])
-        thesis_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=5)
-
-        # Thesis input setup
+        self.calculate_btn.pack(pady=5)
+    def SETUP_result_frame(self, parent):
+        # Add result display frame after grade count section
+        result_display = tk.Frame(parent, bg=COLORS["background"], relief="groove", borderwidth=1)
+        result_display.pack(fill=tk.X, pady=10, padx=5)
+        
         tk.Label(
-            thesis_frame,
-            text="Thesis Grade:",
-            font=FONTS["normal"],
-            bg=COLORS["background"],
-            fg=COLORS["primary"],
-        ).pack(side=tk.LEFT, padx=5)
-
-        # Input type selector for thesis
-        self.thesis_type_combo = ttk.Combobox(
-            thesis_frame,
-            values=self.input_types,
-            textvariable=self.thesis_input_type_var,
-            width=12,
-            state="readonly",
-            style="Custom.TCombobox",
-        )
-        self.thesis_type_combo.pack(side=tk.LEFT, padx=5)
-
-        # Frame for thesis grade input
-        self.thesis_grade_frame = tk.Frame(thesis_frame, bg=COLORS["background"])
-        self.thesis_grade_frame.pack(side=tk.LEFT, padx=5)
-
-        # Letter grade display
-        self.thesis_letter_label = tk.Label(
-            thesis_frame,
-            textvariable=self.thesis_letter_grade_var,
-            width=4,
-            font=FONTS["normal"],
-            bg=COLORS["background"],
-        )
-        self.thesis_letter_label.pack(side=tk.LEFT, padx=5)
-
-        # Initialize thesis input and disable it
-        self.update_thesis_input()
-        self.toggle_thesis()
-
-        # Add tooltip binding for thesis frame
-        self.thesis_grade_frame.bind("<Enter>", self.show_tooltip)
-        self.thesis_grade_frame.bind("<Leave>", self.hide_tooltip)
-        self.thesis_type_combo.bind("<Enter>", self.show_tooltip)
-        self.thesis_type_combo.bind("<Leave>", self.hide_tooltip)
-
-        # Center the result display in bottom frame with better spacing
-        result_frame = tk.Frame(bottom_frame, bg=COLORS["background"])
-        result_frame.pack(expand=True, fill=tk.BOTH)
-
-        # CGPA display with more prominent styling
-        tk.Label(
-            result_frame,
-            textvariable=self.result_var,
+            result_display,
+            textvariable=self.results["current_result"],
             font=FONTS["result"],
             bg=COLORS["background"],
             fg=COLORS["primary"],
-        ).pack(expand=True, fill=tk.BOTH, pady=5)
+        ).pack(pady=5)
 
-        # Error message with enhanced visibility
         tk.Label(
-            result_frame,
-            textvariable=self.error_var,
+            result_display,
+            textvariable=self.state["error_var"],
             font=FONTS["normal"],
             bg=COLORS["background"],
             fg=COLORS["error"],
-            wraplength=600,
-        ).pack(expand=True, fill=tk.BOTH)
+            wraplength=400,
+        ).pack(pady=5)
 
-    def toggle_thesis(self):
-        state = "normal" if self.include_thesis.get() else "disabled"
-        fg_color = COLORS["primary"] if self.include_thesis.get() else "gray"
+    # RIGHT FRAMES
+    def SETUP_ManualInput_frame(self, parent):
+        # Manual CGPA input section
+        manual_frame = tk.Frame(parent, bg=COLORS["background"], relief="groove", borderwidth=1)
+        manual_frame.pack(fill=tk.X, pady=5, padx=5)
 
-        # Update thesis input widgets
-        self.thesis_type_combo.config(state=state)
+        header_frame = tk.Frame(manual_frame, bg=COLORS["background"])
+        header_frame.pack(fill=tk.X, pady=5)
 
-        # Update all widgets in thesis_grade_frame
-        for widget in self.thesis_grade_frame.winfo_children():
-            if isinstance(widget, tk.Entry):
-                widget.config(state=state)
-            elif isinstance(widget, ttk.Combobox):
-                widget.config(
-                    state="readonly" if self.include_thesis.get() else "disabled"
-                )
-
-        # Update labels
-        for widget in self.thesis_type_combo.master.winfo_children():
-            if isinstance(widget, tk.Label):
-                widget.config(fg=fg_color)
-
-        self.thesis_letter_label.config(fg=fg_color)
-        self.calculate_cgpa()
-
-    def update_thesis_input(self, *args):
-        for widget in self.thesis_grade_frame.winfo_children():
-            widget.destroy()
-
-        state = "normal" if self.include_thesis.get() else "disabled"
-
-        if self.thesis_input_type_var.get() == "Score (0-100)":
-            entry = tk.Entry(
-                self.thesis_grade_frame,
-                width=5,
-                textvariable=self.thesis_grade_var,
-                font=FONTS["normal"],
-                relief="solid",
-                state=state,
-                validate="key",
-                validatecommand=(self.app.register(self.validate_score), "%P"),
-            )
-            entry.pack(side=tk.LEFT)
-        else:
-            grade_selector = ttk.Combobox(
-                self.thesis_grade_frame,
-                values=list(GRADES.keys()),
-                textvariable=self.thesis_grade_var,
-                width=5,
-                state="readonly" if self.include_thesis.get() else "disabled",
-                style="Custom.TCombobox",
-            )
-            grade_selector.pack(side=tk.LEFT)
-
-        # Reset and recalculate
-        self.thesis_grade_var.set("")
-        self.thesis_letter_grade_var.set("")
-        self.calculate_cgpa()
-
-    def update_thesis_grade(self, *args):
-        input_val = self.thesis_grade_var.get()
-        if input_val:
-            letter = self.get_letter_grade(input_val, self.thesis_input_type_var.get())
-            if self.thesis_input_type_var.get() == "Score (0-100)":
-                self.thesis_letter_grade_var.set(letter if letter else "")
-            else:
-                self.thesis_letter_grade_var.set("")
-        else:
-            self.thesis_letter_grade_var.set("")
-        self.calculate_cgpa()
-
-    def get_letter_grade(self, value, input_type):
-        if input_type == "Score (0-100)":
-            try:
-                score = float(value)
-                for min_score, max_score, letter in GRADE_RANGES:
-                    if min_score <= score <= max_score:
-                        return letter
-            except ValueError:
-                return None
-        else:  # Letter Grade input
-            return value if value in GRADES else None
-        return None
-
-    def add_grade_row(self):
-        row = len(self.grade_rows)
-        frame = tk.Frame(self.container, bg="white")  # Changed background to white
-        frame.pack(fill=tk.X, pady=5)
-
-        grade_var = tk.StringVar()
-        count_var = tk.StringVar()
-        letter_grade_var = tk.StringVar()
-        input_type_var = tk.StringVar(value=self.input_types[0])
-
-        # Input type selector
-        input_type = ttk.Combobox(
-            frame,
-            values=self.input_types,
-            textvariable=input_type_var,
-            width=12,
-            state="readonly",
-            style="Custom.TCombobox",
-        )
-        input_type.pack(side=tk.LEFT, padx=5)
-
-        # Grade input (will be updated based on input type)
-        grade_frame = tk.Frame(frame, bg="white")
-        grade_frame.pack(side=tk.LEFT, padx=5)
-
-        def update_grade_input(*args):
-            # Clear grade frame
-            for widget in grade_frame.winfo_children():
-                widget.destroy()
-
-            if input_type_var.get() == "Score (0-100)":
-                tk.Entry(
-                    grade_frame,
-                    width=5,
-                    textvariable=grade_var,
-                    font=FONTS["normal"],
-                    relief="solid",
-                    validate="key",
-                    validatecommand=(self.app.register(self.validate_score), "%P"),
-                ).pack(side="left")
-            else:
-                grade_selector = ttk.Combobox(
-                    grade_frame,
-                    values=list(GRADES.keys()),
-                    textvariable=grade_var,
-                    width=5,
-                    state="readonly",
-                    style="Custom.TCombobox",
-                )
-                grade_selector.pack(side="left")
-
-            # Reset grade value
-            grade_var.set("")
-            letter_grade_var.set("")
-
-        # Letter grade display (only shown for numerical input)
-        letter_label = tk.Label(
-            frame,
-            textvariable=letter_grade_var,
-            width=4,
-            font=FONTS["normal"],
-            bg="white",
-        )
-        letter_label.pack(side=tk.LEFT, padx=5)
-
-        tk.Label(frame, text="Count:", font=FONTS["normal"], bg="white").pack(
-            side=tk.LEFT, padx=5
-        )
-        count_entry = tk.Entry(
-            frame, width=5, textvariable=count_var, font=FONTS["normal"], relief="solid"
-        )
-        count_entry.pack(side=tk.LEFT, padx=5)
-
-        # Delete button
-        tk.Button(
-            frame,
-            text="×",
-            font=("Helvetica", 12),
-            bg=COLORS["error"],
-            fg="white",
-            relief="flat",
-            command=lambda: self.delete_row(
-                frame, (grade_var, count_var, letter_grade_var)
-            ),
+        # Manual input toggle
+        tk.Checkbutton(
+            header_frame,
+            text="Manual CGPA & Credit Input",
+            variable=self.state["manual_input_enabled"],
+            command=self.toggle_manual_input,
+            bg=COLORS["background"],
         ).pack(side=tk.LEFT, padx=5)
 
-        def update_grade(*args):
-            input_val = grade_var.get()
-            if input_val:  # Changed from (input_val) to input_val for consistency
-                letter = self.get_letter_grade(input_val, input_type_var.get())
-                letter_grade_var.set(
-                    letter if letter and input_type_var.get() == "Score (0-100)" else ""
-                )
-            else:
-                letter_grade_var.set("")  # Clear letter grade when input is empty
-            self.calculate_cgpa()
+        input_frame = tk.Frame(manual_frame, bg=COLORS["background"])
+        input_frame.pack(pady=5)
 
-        input_type_var.trace_add("write", update_grade_input)
-        grade_var.trace_add("write", update_grade)
-        count_var.trace_add("write", self.calculate_cgpa)
+        # Manual CGPA input
+        tk.Label(
+            input_frame,
+            text="Current CGPA",
+            font=FONTS["normal-bold"],
+            bg=COLORS["background"],
+        ).pack(side=tk.LEFT, padx=5)
 
-        self.grade_rows.append((grade_var, count_var, letter_grade_var))
-        update_grade_input()  # Initialize grade input
+        self.manual_cgpa_entry = tk.Entry(
+            input_frame,
+            textvariable=self.manual_cgpa,
+            width=9,
+            justify="center",
+            state="disabled",
+            font=FONTS["normal"],
+        )
+        self.manual_cgpa_entry.pack(side=tk.LEFT, padx=5)
 
-    def delete_row(self, frame, vars):
-        self.grade_rows.remove(vars)
-        frame.destroy()
-        self.calculate_cgpa()
+        # Total credits input
+        tk.Label(
+            input_frame,
+            text="Completed Total Credits:",
+            font=FONTS["normal-bold"],
+            bg=COLORS["background"],
+        ).pack(side=tk.LEFT, padx=5)
 
+        self.credits_entry = tk.Entry(
+            input_frame,
+            textvariable=self.results["total_credits"],
+            width=10,
+            justify="center",
+            state="disabled",
+            font=FONTS["normal"],
+        )
+        self.credits_entry.pack(side=tk.LEFT, padx=5)
+    def SETUP_scrollable_semester_frame(self, parent):
+        # Create scrollable container
+        container = tk.Frame(parent, bg=COLORS["background"])
+        container.pack(fill=tk.BOTH, expand=True, pady=5)
+
+        # Create canvas with scrollbar
+        self.canvas = tk.Canvas(container, bg="white")
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=self.canvas.yview)
+        
+        # Create main frame for semesters
+        self.semester_frame = tk.Frame(self.canvas, bg="white")
+        self.semester_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
+
+        # Add the frame to the canvas
+        self.canvas.create_window((0, 0), window=self.semester_frame, anchor="nw", width=430)
+        self.canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Pack scrollbar and canvas
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Bind mousewheel scrolling
+        def _on_mousewheel(event):
+            self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        self.canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+    # HELPER FUNCTIONS
+    def _reset_display(self):
+        """Reset display after error"""
+        self.results["current_result"].set("Calculated CGPA: ---")
+        self.calculate_btn.config(bg=COLORS["secondary"])
     def update_program_info(self, *args):
         program = self.selected_program.get()
-        if program in PROGRAMS:
+        if (program in PROGRAMS):
             info = PROGRAMS[program]
-            regular_courses = (
-                info["credits"] - 4
-            ) / 3  # Deduct thesis credits and convert to courses
-            self.program_info_var.set(
+            regular_courses = (info["credits"] - 4) / 3  # Deduct thesis credits and convert to courses
+            self.state["program_info_var"].set(
                 f"Program requirement: {info['credits']} credits "
                 f"({int(regular_courses)} regular courses + thesis/internship)"
             )
-
     def update_course_count(self, *args):
-        if not self.total_credits.get().strip():
-            self.course_count_var.set("")
-            self.error_var.set("Please enter total credits completed")
-            return
+        """Update course count and maintain total credits"""
+        total_courses = 0
+        total_credits = 0
+        
+        # Calculate from grade inputs
+        for grade, count_var in self.grade_counts.items():
+            try:
+                count = int(count_var.get() or 0)
+                total_courses += count
+                total_credits += count * 3  # Each course is 3 credits
+            except ValueError:
+                continue
+        
+        # Add thesis credits if included
+        if self.state["include_thesis"].get():
+            total_credits += 4
+            thesis_text = " + thesis/internship"
+        else:
+            thesis_text = ""
             
-        try:
-            credits = float(self.total_credits.get())
-            courses = credits / 3
-            thesis_text = " + thesis/internship" if self.include_thesis.get() else ""
-            self.course_count_var.set(
-                f"Equivalent to {courses:.1f} courses{thesis_text}"
-            )
-            self.calculate_cgpa()
-        except ValueError:
-            self.course_count_var.set("")
+        # Update displays
+        self.results["total_course_count"].set(f"Total courses: {total_courses}{thesis_text}")
+        
+        # Only update total_credits if not in manual mode
+        if not self.state["manual_input_enabled"].get():
+            self.results["total_credits"].set(str(total_credits))
+    def _create_semester_ui(self, semester_data):
+        """Create and return UI elements for a semester"""
+        # Create container
+        container = tk.Frame(self.semester_frame, bg="white", relief="groove", borderwidth=1)
+        container.pack(fill=tk.X, pady=5, padx=5)
 
-    def calculate_cgpa(self, *args):
-        try:
-            credits = float(self.total_credits.get() or 0)
-            base_courses = credits / 3
-            total_target = base_courses + (1 if self.include_thesis.get() else 0)
-            current_total = 0
-            total_points = 0
-            total_credits = 0
+        # Header frame
+        header_frame = tk.Frame(container, bg="white")
+        header_frame.pack(fill=tk.X, pady=5)
 
-            # Calculate for regular courses
-            for grade_var, count_var, letter_grade_var in self.grade_rows:
-                grade = grade_var.get()
-                count = count_var.get()
-                letter_grade = letter_grade_var.get() or grade
+        # Left side: Semester number
+        tk.Label(
+            header_frame,
+            text=f"Semester {semester_data['number']}",
+            font=FONTS["subheader"],
+            bg="white",
+        ).pack(side=tk.LEFT, padx=5)
 
-                if letter_grade and count and letter_grade in GRADES:
-                    count = int(count)
-                    current_total += count
-                    credits_for_courses = count * 3
-                    total_credits += credits_for_courses
-                    total_points += GRADES[letter_grade] * credits_for_courses
+        # Right side: Stats and delete button
+        right_frame = tk.Frame(header_frame, bg="white")
+        right_frame.pack(side=tk.RIGHT, padx=5)
 
-            # Add thesis grade if included
-            if self.include_thesis.get() and self.thesis_grade_var.get():
-                thesis_grade = self.thesis_grade_var.get()
-                thesis_letter = (
-                    self.thesis_letter_grade_var.get()
-                    if self.thesis_input_type_var.get() == "Score (0-100)"
-                    else thesis_grade
-                )
+        # Delete semester button
+        tk.Button(
+            right_frame,
+            text=chr(10005),
+            command=lambda: self.delete_semester(container, semester_data),
+            bg=COLORS["error"],
+            fg="white",
+            font=FONTS["normal"],
+        ).pack(side=tk.RIGHT, padx=5)
 
-                if thesis_letter in GRADES:
-                    current_total += 1
-                    total_credits += 4
-                    total_points += GRADES[thesis_letter] * 4
+        # Stats display
+        tk.Label(
+            right_frame,
+            textvariable=semester_data["stats"]["course_count"],
+            font=FONTS["small"],
+            bg="white",
+        ).pack(side=tk.RIGHT, padx=5)
 
-            # Show partial CGPA even if not all courses are added
-            if total_credits > 0:
-                cgpa = total_points / total_credits
-                self.result_var.set(f"Current CGPA: {cgpa:.2f}")
+        tk.Label(
+            right_frame,
+            textvariable=semester_data["stats"]["credits_count"],
+            font=FONTS["small"],
+            bg="white",
+        ).pack(side=tk.RIGHT, padx=5)
+
+        # Course container
+        course_frame = tk.Frame(container, bg="white")
+        course_frame.pack(fill=tk.X, pady=5)
+
+        # Add course button
+        tk.Button(
+            container,
+            text="Add Course",
+            command=lambda: self.add_course_to_semester(semester_data),
+            bg=COLORS["secondary"],
+            fg="white",
+            font=FONTS["normal-bold"],
+        ).pack(pady=5)
+
+        return {
+            "container": container,
+            "course_frame": course_frame
+        }
+    def add_semester_box(self):
+        semester = {
+            "number": self.tracking["semester_count"] + 1,
+            "courses": [],
+            "stats": {
+                "course_count": tk.StringVar(value="0/5 courses"),
+                "credits_count": tk.StringVar(value="Credits: 0")
+            }
+        }
+        
+        # Create UI elements
+        semester["ui"] = self._create_semester_ui(semester)
+        
+        # Update tracking
+        self.tracking["semester_count"] += 1
+        self.tracking["semesters"].append(semester)
+        self.tracking["semester_list"][semester["number"]] = semester
+        
+    def delete_semester(self, container, semester_data):
+        """Delete a semester and update numbering"""
+        self.tracking["semesters"].remove(semester_data)
+        container.destroy()
+        
+        # Decrease semester count
+        self.tracking["semester_count"] = len(self.tracking["semesters"])
+        
+        # Renumber remaining semesters
+        for i, semester in enumerate(self.tracking["semesters"], 1):
+            semester["number"] = i
+            # Update semester header label
+            for widget in semester["ui"]["container"].winfo_children():
+                if isinstance(widget, tk.Frame):  # Header frame
+                    for w in widget.winfo_children():
+                        if isinstance(w, tk.Label):
+                            w.config(text=f"Semester {i}")
+                            break
+        
+        # Update future CGPA calculation button state based on manual input
+        if self.state["manual_input_enabled"].get() and self.manual_cgpa.get() and self.results["total_credits"].get():
+            self.calculate_future_btn.config(state="normal")
+        elif not self.state["manual_input_enabled"].get() and self.tracking["current_cgpa"]:
+            self.calculate_future_btn.config(state="normal")
+        else:
+            self.calculate_future_btn.config(state="disabled")
+            self.results["future_result"].set("Future CGPA: Not calculated")
+    def add_course_to_semester(self, semester_data):
+        if len(semester_data["courses"]) >= 5:
+            messagebox.showwarning("Limit Reached", "Maximum 5 courses allowed per semester")
+            return
+
+        course_frame = tk.Frame(semester_data["ui"]["course_frame"], bg="white")
+        course_frame.pack(fill=tk.X, pady=2, padx=5)
+
+        # Course inputs
+        tk.Label(
+            course_frame,
+            text=f"Course {len(semester_data['courses']) + 1}:",
+            font=FONTS["normal-bold"],
+            bg="white",
+        ).pack(side=tk.LEFT, padx=5)
+
+        grade_var = tk.StringVar()
+        credit_var = tk.StringVar(value="3")
+
+        grade_combo = ttk.Combobox(
+            course_frame,
+            textvariable=grade_var,
+            values=list(GRADES.keys()),
+            width=5,
+            state="readonly",
+        )
+        grade_combo.pack(side=tk.LEFT, padx=5)
+        grade_combo.set("")  # Clear initial value
+
+        tk.Entry(
+            course_frame,
+            textvariable=credit_var,
+            width=5,
+            font=FONTS["normal"],
+        ).pack(side=tk.LEFT, padx=5)
+
+        # Remove button
+        tk.Button(
+            course_frame,
+            text=chr(10005),
+            command=lambda: self.remove_course(course_frame, semester_data, (grade_var, credit_var)),
+            bg=COLORS["error"],
+            fg="white",
+        ).pack(side=tk.RIGHT, padx=5)
+
+        semester_data["courses"].append((grade_var, credit_var))
+        
+        # Update counters
+        def update_stats(*args):
+            credits = sum(float(cred.get() or 0) for _, cred in semester_data["courses"])
+            semester_data["credits_count"].set(f"Credits: {credits}")
+            semester_data["course_count"].set(f"{len(semester_data['courses'])}/5 courses")
+
+        grade_var.trace_add("write", update_stats)
+        credit_var.trace_add("write", update_stats)
+        update_stats()
+    def remove_course(self, frame, semester_data, course_vars):
+        """Remove a course from a semester"""
+        semester_data["courses"].remove(course_vars)
+        frame.destroy()
+        
+        # Update course numbers
+        for i, frame in enumerate(semester_data["ui"]["course_frame"].winfo_children(), 1):
+            for widget in frame.winfo_children():
+                if isinstance(widget, tk.Label) and "Course" in widget.cget("text"):
+                    widget.config(text=f"Course {i}:")
+                    break
+        
+        # Update counters
+        credits = sum(float(cred.get() or 0) for _, cred in semester_data["courses"])
+        semester_data["credits_count"].set(f"Credits: {credits}")
+        semester_data["course_count"].set(f"{len(semester_data['courses'])}/5 courses")
+    def toggle_thesis(self):
+        state_update = "readonly" if self.state["include_thesis"].get() else "disabled"
+        for widget in self.thesis_frame.winfo_children():
+            if isinstance(widget, ttk.Combobox):
+                widget.config(state=state_update)
+        self.calculate_cgpa()
+    def toggle_manual_input(self):
+        """Toggle manual CGPA input with proper credit sync"""
+        if self.state["manual_input_enabled"].get():
+            # Enable manual input
+            self.manual_cgpa_entry.config(state="normal")
+            self.credits_entry.config(state="normal")
+            
+            # Set current values if available
+            if self.tracking["current_cgpa"]:
+                self.manual_cgpa.set(f"{self.tracking['current_cgpa']:.5f}")
             else:
-                self.result_var.set("Current CGPA: - - -")
+                self.manual_cgpa.set("")
+                
+            # Don't clear credits if they're already calculated
+            if not self.results["total_credits"].get():
+                self.credits_entry.delete(0, tk.END)
+        else:
+            # Disable manual input
+            self.manual_cgpa_entry.config(state="disabled")
+            self.credits_entry.config(state="disabled")
+            
+            # Sync with calculated values
+            if self.tracking["current_cgpa"]:
+                self.manual_cgpa.set(f"{self.tracking['current_cgpa']:.5f}")
+            else:
+                self.manual_cgpa.set("")
+    def calculate_all_semesters(self):
+        """Simplified future CGPA calculation"""
+        try:
+            # Get current CGPA and credits
+            if self.state["manual_input_enabled"].get():
+                try:
+                    current_cgpa = float(self.manual_cgpa.get() or 0)
+                    current_credits = float(self.results["total_credits"].get() or 0)
+                    if current_cgpa == 0 or current_credits == 0:
+                        messagebox.showwarning("Invalid Input", "Please enter valid CGPA and credits")
+                        return
+                except ValueError:
+                    messagebox.showwarning("Invalid Input", "Invalid CGPA or credits format")
+                    return
+            elif self.tracking["current_cgpa"]:
+                current_cgpa = self.tracking["current_cgpa"]
+                current_credits = float(self.results["total_credits"].get())
+            else:
+                messagebox.showwarning("No CGPA", "Calculate current CGPA first or use manual input")
+                return
 
-            # Update error/warning messages
-            if total_target == 0:  # No credits entered yet
-                self.error_var.set("")
-            elif current_total > total_target:
-                self.error_var.set(
-                    f"Error: Total courses ({current_total}) exceeds target ({total_target:.0f})"
-                )
-            elif total_target > current_total:
-                remaining = total_target - current_total
-                self.error_var.set(
-                    f"Remaining: {remaining:.0f} more course{'s' if remaining > 1 else ''} needed! Please add in course management."
-                )
-            elif current_total > 0:  # Only show success message if courses are added
-                self.error_var.set("All required courses added!")
+            # Process each semester
+            for semester in self.tracking["semesters"]:
+                for grade_var, credit_var in semester["courses"]:
+                    if not grade_var.get() or not credit_var.get():
+                        messagebox.showwarning("Missing Data", f"Missing grade or credit in Semester {semester['number']}")
+                        return
 
-        except ValueError as e:
-            self.error_var.set("Please enter valid numbers")
-            if not self.total_credits.get():
-                self.result_var.set("Current CGPA: - - -")
+            # Calculate future CGPA
+            total_points = current_cgpa * current_credits
+            total_credits = current_credits
+
+            for semester in self.tracking["semesters"]:
+                for grade_var, credit_var in semester["courses"]:
+                    credits = float(credit_var.get())
+                    total_credits += credits
+                    total_points += GRADES[grade_var.get()] * credits
+
+            if total_credits > current_credits:
+                future_cgpa = total_points / total_credits
+                self.results["future_result"].set(
+                    f"Future CGPA after {len(self.tracking['semesters'])} semester{'s' if len(self.tracking['semesters'])>1 else ''}: {future_cgpa:.5f}"
+                )
+            else:
+                messagebox.showwarning("No Future Courses", "Add future courses to calculate")
 
         except Exception as e:
-            self.error_var.set(f"An error occurred: {str(e)}")
-            self.result_var.set("Current CGPA: - - -")
-
-    def validate_score(self, value):
-        """Validate numeric score input"""
-        if not value:  # Allow empty values
-            return True
-        try:
-            score = float(value)
-            return 0 <= score <= 100
-        except ValueError:
-            return False
-
-    def show_tooltip(self, event=None):
-        if not self.include_thesis.get():
-            x, y, _, _ = event.widget.bbox("insert")
-            x += event.widget.winfo_rootx() + 25
-            y += event.widget.winfo_rooty() + 20
-
-            # Create tooltip
-            self.tooltip = tk.Toplevel(self.app)
-            self.tooltip.wm_overrideredirect(True)
-            self.tooltip.wm_geometry(f"+{x}+{y}")
-
-            label = tk.Label(
-                self.tooltip,
-                text=self.thesis_tooltip,
-                bg="lightyellow",
-                font=FONTS["small"],
-                relief="solid",
-                borderwidth=1,
-            )
-            label.pack()
-
-    def hide_tooltip(self, event=None):
-        if hasattr(self, "tooltip"):
-            self.tooltip.destroy()
-
+            messagebox.showerror("Error", f"Calculation error: {str(e)}")
+            self.results["future_result"].set("Future CGPA: Not calculated")
     def clear_all(self):
         """Clear all inputs and reset calculator"""
-        if messagebox.askyesno(
-            "Confirm Clear", "Are you sure you want to clear all entries?"
-        ):
-            # Clear regular courses
-            for frame, _ in [
-                (child, child.destroy()) for child in self.container.winfo_children()
-            ]:
-                pass
-            self.grade_rows.clear()
-
-            # Clear thesis
-            self.include_thesis.set(False)
-            self.thesis_grade_var.set("")
-            self.thesis_letter_grade_var.set("")
-            self.thesis_input_type_var.set(self.input_types[0])
-
-            # Clear credits
-            self.total_credits.set("")
+        if messagebox.askyesno("Confirm Clear", "Are you sure you want to clear all entries?"):
+            # Clear grade counts
+            for var in self.grade_counts.values():
+                var.set("0")
+            
+            # Clear thesis data
+            self.state["include_thesis"].set(False)
+            self.thesis_grade.set("")
+            
+            # Clear program selection
             self.selected_program.set("")
+            
+            # Clear result variables
+            self.results["total_credits"].set("")
+            self.results["current_result"].set("Calculated CGPA: ---")
+            self.results["future_result"].set("Future CGPA: ---")
+            
+            # Clear tracking data
+            self.tracking["current_cgpa"] = None
+            
+            # Clear all semesters
+            for semester in self.tracking["semesters"][:]:  # Create a copy to iterate
+                self.delete_semester(semester["ui"]["container"], semester)
+            
+            # Reset buttons
+            self.calculate_btn.config(bg=COLORS["secondary"])
+            self.calculate_future_btn.config(state="disabled")
+            
+            # Reset manual input if enabled
+            if self.state["manual_input_enabled"].get():
+                self.state["manual_input_enabled"].set(False)
+                self.toggle_manual_input()
 
-            # Reset result
-            self.result_var.set("Current CGPA: - - -")
-            self.error_var.set("")
-
-    def handle_key(self, event):
-        """Handle keyboard input for calculator"""
-        if event.char.isdigit() or event.char == ".":
-            self.calculator_click(event.char)
-            return "break"
-        elif event.char in "+-*/":
-            self.calculator_click(event.char)
-            return "break"
-        return "break"  # Prevent default handling
-
-    def handle_backspace(self, event):
-        """Handle backspace in calculator input"""
-        if self.current_num and not self.new_number:
-            self.current_num = self.current_num[:-1] or "0"
-            self.calc_display.set(self.current_num)
-        return "break"
-
-    def calculator_click(self, value):
+    # CGPA CALCULATION
+    def calculate_cgpa(self, *args):
         try:
-            if value.isdigit() or value == ".":
-                if self.new_number:
-                    self.current_num = value
-                    self.new_number = False
-                else:
-                    if value == "." and "." in self.current_num:
-                        return
-                    self.current_num = (self.current_num + value).lstrip("0") or "0"
-                self.calc_display.set(self.current_num)
-
-            elif value in "+-*/":
-                if self.prev_num is not None and self.operation and not self.new_number:
-                    self.calculate_result()
-                self.prev_num = float(self.current_num or "0")
-                self.operation = value
-                self.new_number = True
-                # Update expression display
-                self.calc_expression.set(f"{self.prev_num} {value}")
-
-            elif value == "=":
-                if self.prev_num is not None and self.operation:
-                    self.calculate_result()
-                    self.calc_expression.set("")  # Clear expression after result
-                    self.new_number = True
-
-            elif value == "C":  # Clear all
-                self.current_num = "0"
-                self.prev_num = None
-                self.operation = None
-                self.new_number = True
-                self.calc_display.set("0")
-                self.calc_expression.set("")
-
-            elif value == "CE":  # Clear entry
-                self.current_num = "0"
-                self.calc_display.set("0")
-                self.new_number = True
-
-        except Exception as e:
-            self.calc_display.set("Error")
-            self.calc_expression.set("")
-            self.current_num = "0"
-            self.prev_num = None
-            self.operation = None
-            self.new_number = True
-
-    def calculate_result(self):
-        try:
-            current = float(self.current_num or "0")
-            if self.operation == "/" and current == 0:
-                raise ZeroDivisionError
-
-            expression = f"{self.prev_num}{self.operation}{current}"
-            result = eval(expression)  # Safe here as we control the input
-
-            # Format result
-            if result.is_integer():
-                formatted = str(int(result))
+            totals = self._calculate_grade_totals()
+            
+            if totals["credits"] > 0:
+                cgpa = totals["points"] / totals["credits"]
+                self._update_cgpa_display(cgpa, totals["credits"])
             else:
-                formatted = f"{result:.6f}".rstrip("0").rstrip(".")
-
-            self.calc_display.set(formatted)
-            self.current_num = formatted
-            self.prev_num = None
-            self.operation = None
-
-        except ZeroDivisionError:
-            self.calc_display.set("Error: Division by zero")
-            self.current_num = "0"
-            self.prev_num = None
-            self.operation = None
-            self.new_number = True
-
-    def run(self):
-        self.app.mainloop()
+                messagebox.showwarning("No Data", "No valid grades entered")
+                self._reset_display()
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"Calculation error: {str(e)}")
+            self._reset_display()
+    def _calculate_grade_totals(self):
+        totals = {"points": 0, "credits": 0, "courses": 0}
+        
+        # Calculate regular courses
+        for letter, count_var in self.grade_counts.items():
+            count = self._safe_int(count_var.get())
+            if count > 0:
+                totals["courses"] += count
+                totals["credits"] += count * 3
+                totals["points"] += GRADES[letter] * count * 3
+        
+        # Add thesis if included
+        if self.state["include_thesis"].get() and self.thesis_grade.get():
+            totals["credits"] += 4
+            totals["points"] += GRADES[self.thesis_grade.get()] * 4
+            
+        return totals
+    def _update_cgpa_display(self, cgpa, credits):
+        """Update display with calculated CGPA"""
+        self.tracking["current_cgpa"] = cgpa
+        self.results["current_result"].set(f"Current CGPA: {cgpa:.5f}")
+        self.calculate_btn.config(bg=COLORS["success"])
+        self.state["error_var"].set("")
+        
+        # Update total credits if not in manual mode
+        if not self.state["manual_input_enabled"].get():
+            self.results["total_credits"].set(str(credits))
+            
+        # Enable future CGPA calculation
+        self.calculate_future_btn.config(state="normal")
+    def _safe_int(self, value):
+        """Safely convert string to integer"""
+        try:
+            return int(value.strip() or 0)
+        except ValueError:
+            return 0
 
 
 if __name__ == "__main__":
     calculator = CGPACalculator()
-    calculator.run()
+    calculator.app.mainloop()
