@@ -12,6 +12,13 @@ A GUI application for calculating CGPA (Cumulative Grade Point Average) with cur
 - Manual CGPA input option for faster calculation
 - Supports up to 5 courses per semester in prediction
 
+## Installation & Usage
+
+1. Download the latest release (`cg-calc.zip`) from the [releases page](https://github.com/ahshafin2315/cg-calc/releases)
+2. Extract the zip file to your preferred location
+3. Run `cg-calc.exe` from the extracted folder
+4. No installation required - just keep the extracted folder intact
+
 ## Quick Start Guide
 
 ### Current CGPA Calculation
