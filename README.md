@@ -15,9 +15,10 @@ A GUI application for calculating CGPA (Cumulative Grade Point Average) with cur
 ## Installation & Usage
 
 1. Download the latest release (`cg-calc.zip`) from the [releases page](https://github.com/ahshafin2315/cg-calc/releases)
-2. Extract the zip file to your preferred location
-3. Run `cg-calc.exe` from the extracted folder
-4. No installation required - just keep the extracted folder intact
+2. Exclude file from antivirus block as it will be flagged malicious ([Virustotal Results](https://www.virustotal.com/gui/url/d557f5c32d2e3ca93ec6331df29a06b7a9ecdede140451c67e161d3449b5e4e0))
+3. Extract the zip file to your preferred location
+4. Run `cg-calc.exe` from the extracted folder
+5. No installation required - just keep the extracted folder intact
 
 ## Quick Start Guide
 
