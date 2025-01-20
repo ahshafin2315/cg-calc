@@ -667,31 +667,34 @@ class CGPACalculator:
         
     def delete_semester(self, container, semester_data):
         """Delete a semester and update numbering"""
-        self.tracking["semesters"].remove(semester_data)
-        container.destroy()
-        
-        # Decrease semester count
-        self.tracking["semester_count"] = len(self.tracking["semesters"])
-        
-        # Renumber remaining semesters
-        for i, semester in enumerate(self.tracking["semesters"], 1):
-            semester["number"] = i
-            # Update semester header label
-            for widget in semester["ui"]["container"].winfo_children():
-                if isinstance(widget, tk.Frame):  # Header frame
-                    for w in widget.winfo_children():
-                        if isinstance(w, tk.Label):
-                            w.config(text=f"Semester {i}")
-                            break
-        
-        # Update future CGPA calculation button state based on manual input
-        if self.state["manual_input_enabled"].get() and self.manual_cgpa.get() and self.results["total_credits"].get():
-            self.calculate_future_btn.config(state="normal")
-        elif not self.state["manual_input_enabled"].get() and self.tracking["current_cgpa"]:
-            self.calculate_future_btn.config(state="normal")
-        else:
-            self.calculate_future_btn.config(state="disabled")
-            self.results["future_result"].set("Future CGPA: Not calculated")
+        try:
+            if semester_data in self.tracking["semesters"]:
+                self.tracking["semesters"].remove(semester_data)
+            container.destroy()
+            
+            # Decrease semester count
+            self.tracking["semester_count"] = len(self.tracking["semesters"])
+            
+            # Renumber remaining semesters
+            for i, semester in enumerate(self.tracking["semesters"], 1):
+                try:
+                    semester["number"] = i
+                    if "ui" in semester and "container" in semester["ui"]:
+                        for widget in semester["ui"]["container"].winfo_children():
+                            if isinstance(widget, tk.Frame):
+                                for w in widget.winfo_children():
+                                    if isinstance(w, tk.Label):
+                                        w.config(text=f"Semester {i}")
+                                        break
+                except Exception as e:
+                    print(f"Debug - Renumbering error: {str(e)}")
+                    continue
+            
+            # Update button states
+            self._update_future_calculation_state()
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to delete semester: {str(e)}")
     def add_course_to_semester(self, semester_data):
         if len(semester_data["courses"]) >= 5:
             messagebox.showwarning("Limit Reached", "Maximum 5 courses allowed per semester")
@@ -741,29 +744,37 @@ class CGPACalculator:
         
         # Update counters
         def update_stats(*args):
-            credits = sum(float(cred.get() or 0) for _, cred in semester_data["courses"])
-            semester_data["credits_count"].set(f"Credits: {credits}")
-            semester_data["course_count"].set(f"{len(semester_data['courses'])}/5 courses")
+            try:
+                credits = sum(float(cred.get() or 0) for _, cred in semester_data["courses"])
+                if "stats" in semester_data:
+                    semester_data["stats"]["credits_count"].set(f"Credits: {credits}")
+                    semester_data["stats"]["course_count"].set(f"{len(semester_data['courses'])}/5 courses")
+            except (ValueError, KeyError, AttributeError) as e:
+                messagebox.showerror("Error", "Failed to update semester stats")
+                print(f"Debug - Update stats error: {str(e)}")
 
         grade_var.trace_add("write", update_stats)
         credit_var.trace_add("write", update_stats)
         update_stats()
     def remove_course(self, frame, semester_data, course_vars):
-        """Remove a course from a semester"""
-        semester_data["courses"].remove(course_vars)
-        frame.destroy()
-        
-        # Update course numbers
-        for i, frame in enumerate(semester_data["ui"]["course_frame"].winfo_children(), 1):
-            for widget in frame.winfo_children():
-                if isinstance(widget, tk.Label) and "Course" in widget.cget("text"):
-                    widget.config(text=f"Course {i}:")
-                    break
-        
-        # Update counters
-        credits = sum(float(cred.get() or 0) for _, cred in semester_data["courses"])
-        semester_data["credits_count"].set(f"Credits: {credits}")
-        semester_data["course_count"].set(f"{len(semester_data['courses'])}/5 courses")
+        try:
+            semester_data["courses"].remove(course_vars)
+            frame.destroy()
+            
+            # Update course numbers safely
+            for i, frame in enumerate(semester_data["ui"]["course_frame"].winfo_children(), 1):
+                for widget in frame.winfo_children():
+                    if isinstance(widget, tk.Label) and "Course" in widget.cget("text"):
+                        widget.config(text=f"Course {i}:")
+                        break
+            
+            # Update counters with safer access
+            if "stats" in semester_data:
+                credits = sum(float(cred.get() or 0) for _, cred in semester_data["courses"])
+                semester_data["stats"]["credits_count"].set(f"Credits: {credits}")
+                semester_data["stats"]["course_count"].set(f"{len(semester_data['courses'])}/5 courses")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to remove course: {str(e)}")
     def toggle_thesis(self):
         state_update = "readonly" if self.state["include_thesis"].get() else "disabled"
         for widget in self.thesis_frame.winfo_children():
@@ -931,6 +942,18 @@ class CGPACalculator:
             return int(value.strip() or 0)
         except ValueError:
             return 0
+    def _update_future_calculation_state(self):
+        """Helper method to update future calculation button state"""
+        try:
+            if self.state["manual_input_enabled"].get() and self.manual_cgpa.get() and self.results["total_credits"].get():
+                self.calculate_future_btn.config(state="normal")
+            elif not self.state["manual_input_enabled"].get() and self.tracking["current_cgpa"]:
+                self.calculate_future_btn.config(state="normal")
+            else:
+                self.calculate_future_btn.config(state="disabled")
+                self.results["future_result"].set("Future CGPA: Not calculated")
+        except Exception as e:
+            print(f"Debug - Button state update error: {str(e)}")
 
 
 if __name__ == "__main__":
