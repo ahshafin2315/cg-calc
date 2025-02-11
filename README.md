@@ -79,8 +79,7 @@ To create executable:
    
    The executable and its dependencies will be in the `dist/cg-calc` directory.
 
-**[Heads-Up:]** PyIntsaller creates a ***false positive Trojan*** detection issue. For workaround, please follow this guide here: [Pyinstaller
-Pyinstaller EXE False-Positive Trojan Virus \[RESOLVED\]](https://plainenglish.io/blog/pyinstaller-exe-false-positive-trojan-virus-resolved-b33842bd3184)
+**[Heads-Up:]** PyIntsaller creates a ***false positive Trojan*** detection issue. For workaround, please follow this guide here: [Pyinstaller EXE False-Positive Trojan Virus \[RESOLVED\]](https://plainenglish.io/blog/pyinstaller-exe-false-positive-trojan-virus-resolved-b33842bd3184)
 
 4. Creating distribution zip:
    - Navigate to `dist/cg-calc/` folder
